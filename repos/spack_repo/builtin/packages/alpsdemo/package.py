@@ -17,9 +17,9 @@ class Alpsdemo(CMakePackage):
     homepage = "https://github.com/ALPSim/ALPS"
     url = "https://github.com/Ooolab/ALPS_Demo/archive/refs/tags/alps_demo_v2.3.3.tar.gz"
 
-    maintainers("Ooolab")
+    maintainers("Ooolab","egull")
 
-    license("MIT", checked_by="Sinan81")
+    license("MIT", checked_by="Ooolab")
 
     version(
         "2.3.3-beta.6", sha256="eb0c8115b034dd7a9dd585d277c4f86904ba374cdbdd130545aca1c432583b68"
@@ -35,7 +35,7 @@ class Alpsdemo(CMakePackage):
     #    "boost@:1.87 +chrono +date_time +filesystem +iostreams +mpi +numpy"
     #    "+program_options +python +regex +serialization +system +test +thread +timer"
     #)
-    depends_on("boost@1.89")  # Just for headers
+    depends_on("boost@1.80:")  # Just for headers. Note that the checksums are listed below
     depends_on("fftw")
     depends_on("hdf5 ~mpi+hl")
     depends_on("lapack")
@@ -48,9 +48,9 @@ class Alpsdemo(CMakePackage):
     extends("python")
 
     # https://github.com/ALPSim/ALPS/issues/9
-    conflicts(
-        "%gcc@14", when="@:2.3.3-beta.6", msg="use gcc older than version 14 or else build fails"
-    )
+    #conflicts(
+    #    "%gcc@14", when="@:2.3.3-beta.6", msg="use gcc older than version 14 or else build fails"
+    #)
 
     # See https://github.com/ALPSim/ALPS/issues/6#issuecomment-2604912169
     # for why this is needed
@@ -130,15 +130,17 @@ class Alpsdemo(CMakePackage):
 
     def cmake_args(self):
         args = []
-        # Boost_ROOT_DIR option is replaced by Boost_SRC_DIR as of 2.3.3-beta.6
+        #this will ensure availability of the cstddef header on darwin (mac)
+        cstdlibstr=""
+        if self.spec.satisfies("platform=darwin"):
+          cstdlibstr=" -stdlib=libc++"
+
         args.append(
             "-DCMAKE_CXX_FLAGS={0}".format(
                 self.compiler.cxx14_flag
                 + " -fpermissive -DBOOST_NO_AUTO_PTR -DBOOST_FILESYSTEM_NO_CXX20_ATOMIC_REF"
                 + " -DBOOST_TIMER_ENABLE_DEPRECATED"
-                + " -stdlib=libc++"
-                #+ " -std=c++14 -stdlib=libc++"
-                #+ " -I{0}".format(self.spec['boost'].prefix.include)
+                + cstdlibstr
             )
         )
         
@@ -210,6 +212,7 @@ class Alpsdemo(CMakePackage):
         env.append_flags('CXXFLAGS', '-DBOOST_FILESYSTEM_NO_CXX20_ATOMIC_REF')
         env.append_flags('CXXFLAGS', '-DBOOST_TIMER_ENABLE_DEPRECATED')
         env.append_flags('CXXFLAGS', self.compiler.cxx14_flag)
+
 
     @run_after("install")
     def relocate_python_stuff(self):
